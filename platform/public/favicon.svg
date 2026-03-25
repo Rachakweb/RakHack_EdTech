@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <rect width="20" height="20" fill="#0A1E3F" />
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0E2856" stroke-width="1" />
+    </pattern>
+    <style>
+      .text {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 80px;
+        font-weight: 900;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .shadow {
+        fill: #FF2A5F;
+        stroke: #FF2A5F;
+        stroke-width: 6;
+      }
+      .main {
+        fill: #0A1E3F;
+        stroke: #A8FFFF;
+        stroke-width: 6;
+      }
+    </style>
+  </defs>
+  <rect width="400" height="200" fill="url(#grid)" />
+  <text x="52%" y="54%" class="text shadow">RAKHACK</text>
+  <text x="50%" y="50%" class="text main">RAKHACK</text>
+</svg>

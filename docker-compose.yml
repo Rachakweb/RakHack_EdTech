@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  rakhack-frontend:
+    build:
+      context: ./platform
+    ports:
+      - "8080:80"
+    depends_on:
+      - rakhack-sqli-lab
+    restart: always
+
+  rakhack-sqli-lab:
+    build:
+      context: ./labs/sqli
+    ports:
+      - "4000:4000"
+    restart: always
