@@ -20,6 +20,7 @@ function sqliLabRunner() {
         const labDir = path.resolve(__dirname, '../labs/sqli');
         sqliProcess = spawn(/^win/.test(process.platform) ? 'npm.cmd' : 'npm', ['start'], {
           cwd: labDir,
+          shell: true,
           stdio: 'ignore'
         });
 
@@ -32,6 +33,19 @@ function sqliLabRunner() {
       server.middlewares.use('/api/status-sqli-lab', (_req: any, res: any) => {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ status: sqliProcess ? 'running' : 'stopped', port: 4000 }));
+      });
+
+      server.middlewares.use('/api/stop-sqli-lab', (_req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (sqliProcess) {
+          if (/^win/.test(process.platform)) {
+            spawn('taskkill', ['/pid', String(sqliProcess.pid), '/f', '/t']);
+          } else {
+            sqliProcess.kill('SIGTERM');
+          }
+          sqliProcess = null;
+        }
+        res.end(JSON.stringify({ status: 'stopped', port: 4000 }));
       });
     }
   }

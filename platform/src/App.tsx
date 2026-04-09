@@ -58,6 +58,13 @@ function LabRunner() {
     setStatus('starting');
     try {
       const res = await fetch('/api/start-sqli-lab');
+      if (!res.ok) {
+        // Docker Compose Fallback: API endpoint returns 404 because Nginx serves static.
+        // We assume Docker Compose has already bound the isolated DB container persistently to 4000.
+        setStatus('running');
+        setPort(4000);
+        return;
+      }
       const data = await res.json();
       if (data.status === 'started' || data.status === 'running') {
         setStatus('running');
@@ -66,10 +73,26 @@ function LabRunner() {
         setStatus('error');
       }
     } catch (e) {
-      // Docker Compose Fallback: If Nginx serves the static frontend, the API endpoint disappears.
-      // We assume Docker Compose has already bound the isolated DB container persistently to 4000.
+      // Catch network or parsing errors during fallback
       setStatus('running');
       setPort(4000);
+    }
+  };
+
+  const stopLab = async () => {
+    setStatus('starting');
+    try {
+      const res = await fetch('/api/stop-sqli-lab');
+      if (!res.ok) {
+        setStatus('idle');
+        return;
+      }
+      const data = await res.json();
+      if (data.status === 'stopped') {
+        setStatus('idle');
+      }
+    } catch(e) {
+      setStatus('idle');
     }
   };
 
@@ -99,17 +122,27 @@ function LabRunner() {
           )}
           {status === 'error' && <span className="text-[#ff003c]">Failed to deploy lab. Ensure ports are clear.</span>}
         </div>
-        <button 
-          onClick={startLab}
-          disabled={status === 'starting' || status === 'running'}
-          className={`px-6 py-2 font-bold uppercase tracking-widest transition-colors border ${
-            status === 'running' 
-              ? 'bg-[#00ffff]/20 text-[#00ffff] border-[#00ffff] cursor-not-allowed' 
-              : 'bg-transparent border-[#ff003c] text-[#ff003c] hover:bg-[#ff003c] hover:text-black'
-          }`}
-        >
-          {status === 'running' ? '[ DEPLOYED ]' : '[ DEPLOY_TARGET ]'}
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={startLab}
+            disabled={status === 'starting' || status === 'running'}
+            className={`px-6 py-2 font-bold uppercase tracking-widest transition-colors border ${
+              status === 'running' 
+                ? 'bg-[#00ffff]/20 text-[#00ffff] border-[#00ffff] cursor-not-allowed' 
+                : 'bg-transparent border-[#ff003c] text-[#ff003c] hover:bg-[#ff003c] hover:text-black'
+            }`}
+          >
+            {status === 'running' ? '[ DEPLOYED ]' : '[ DEPLOY_TARGET ]'}
+          </button>
+          {status === 'running' && (
+            <button
+              onClick={stopLab}
+              className="px-6 py-2 font-bold uppercase tracking-widest transition-colors border bg-transparent border-red-500 text-red-500 hover:bg-red-500 hover:text-black"
+            >
+              [ TERMINATE ]
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -224,6 +257,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('catalog');
   const [activeCourseId, setActiveCourseId] = useState<'re' | 'web'>('re');
   const [currentModule, setCurrentModule] = useState(0);
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
 
   interface Module {
     id: number;
@@ -313,8 +347,22 @@ function App() {
 
         {activeTab === 'course' && (
           <>
-            <aside className="w-80 shrink-0 flex flex-col gap-4">
-              <div className="bg-[#0f0f0f] border border-gray-800 p-4 rounded mb-2 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+            <aside className={`shrink-0 flex flex-col gap-4 transition-all duration-300 ${isSidebarMinimized ? 'w-12' : 'w-80'}`}>
+              <button 
+                onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
+                className="bg-[#0f0f0f] border border-gray-800 p-2 rounded text-[#ff003c] transition-colors flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)] min-h-10 hover:bg-[#ff003c]/10 cursor-pointer"
+                title={isSidebarMinimized ? "Expand Modules" : "Minimize Modules"}
+              >
+                {isSidebarMinimized ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+                )}
+              </button>
+
+              {!isSidebarMinimized && (
+                <>
+                  <div className="bg-[#0f0f0f] border border-gray-800 p-4 rounded mb-2 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                 <h3 className="text-[#ff003c] text-[10px] uppercase mb-1 tracking-widest flex justify-between">
                   <span>Target Identifier</span>
                   <span className="text-gray-500 border border-gray-700 px-1">{activeCourse.identifier}</span>
@@ -361,6 +409,8 @@ function App() {
                   </button>
                 )}
               </div>
+                </>
+              )}
             </aside>
 
             <section className="flex-grow h-[calc(100vh-140px)]">
